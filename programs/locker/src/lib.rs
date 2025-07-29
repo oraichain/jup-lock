@@ -24,13 +24,13 @@ pub mod events;
 pub mod util;
 
 #[cfg(feature = "localnet")]
-declare_id!("2r5VekMNiWPzi1pWwvJczrdPaZnJG59u91unSrTunwJg");
+declare_id!("7MtLZR3qwqBd39WvRNmyjAL5QbF52YG1cJUpgjHWBXaT");
 
 #[cfg(feature = "staging")]
-declare_id!("sLovrBvGxvyvBniMxj8uUt9CdD7CV4PhnBnBD6cPSXo");
+declare_id!("7MtLZR3qwqBd39WvRNmyjAL5QbF52YG1cJUpgjHWBXaT");
 
 #[cfg(not(any(feature = "localnet", feature = "staging")))]
-declare_id!("LocpQgucEQHbqNABEYvBvwoxCPsSbG91A1QaQhQQqjn");
+declare_id!("7MtLZR3qwqBd39WvRNmyjAL5QbF52YG1cJUpgjHWBXaT");
 
 #[program]
 pub mod locker {
