@@ -40,7 +40,6 @@ const MEMO_PROGRAM = new web3.PublicKey(
 const ESCROW_USE_SPL_TOKEN = 0;
 const ESCROW_USE_TOKEN_2022 = 1;
 
-
 export function createLockerProgram(wallet?: Wallet): Program<Locker> {
   const provider = new AnchorProvider(AnchorProvider.env().connection, wallet, {
     maxRetries: 3,
@@ -62,24 +61,29 @@ export function deriveEscrow(base: web3.PublicKey, programId: web3.PublicKey) {
 export function deriveRootEscrow(
   base: web3.PublicKey,
   mint: web3.PublicKey,
-  version: number,
+  version: number
 ) {
   let [pk, _] = web3.PublicKey.findProgramAddressSync(
-    [Buffer.from("root_escrow"), base.toBuffer(), mint.toBuffer(), encodeU64(version)],
+    [
+      Buffer.from("root_escrow"),
+      base.toBuffer(),
+      mint.toBuffer(),
+      encodeU64(version),
+    ],
     LOCKER_PROGRAM_ID
   );
-  return pk
+  return pk;
 }
 
 export function deriveBase(
   rootEscrow: web3.PublicKey,
-  recipient: web3.PublicKey,
+  recipient: web3.PublicKey
 ) {
   let [pk, _] = web3.PublicKey.findProgramAddressSync(
     [Buffer.from("base"), rootEscrow.toBuffer(), recipient.toBuffer()],
     LOCKER_PROGRAM_ID
   );
-  return pk
+  return pk;
 }
 
 export function deriveEscrowMetadata(
@@ -531,8 +535,8 @@ export interface CreateRootEscrowParams {
   tokenMint: web3.PublicKey;
   ownerKeypair: web3.Keypair;
   maxClaimAmount: BN;
-  maxEscrow: BN,
-  version: BN,
+  maxEscrow: BN;
+  version: BN;
   root: Buffer;
   tokenProgram: web3.PublicKey;
 }
@@ -552,17 +556,19 @@ export async function createRootEscrow(params: CreateRootEscrowParams) {
 
   const baseKP = web3.Keypair.generate();
 
-  let rootEscrow = deriveRootEscrow(baseKP.publicKey, tokenMint, version.toNumber());
+  let rootEscrow = deriveRootEscrow(
+    baseKP.publicKey,
+    tokenMint,
+    version.toNumber()
+  );
 
   await program.methods
-    .createRootEscrow(
-      {
-        maxClaimAmount,
-        maxEscrow,
-        version,
-        root: Array.from(new Uint8Array(root)),
-      },
-    )
+    .createRootEscrow({
+      maxClaimAmount,
+      maxEscrow,
+      version,
+      root: Array.from(new Uint8Array(root)),
+    })
     .accounts({
       base: baseKP.publicKey,
       rootEscrow,
@@ -573,7 +579,9 @@ export async function createRootEscrow(params: CreateRootEscrowParams) {
       systemProgram: web3.SystemProgram.programId,
     })
     .signers([baseKP, ownerKeypair])
-    .rpc().catch(console.log).then(console.log);
+    .rpc()
+    .catch(console.log)
+    .then(console.log);
 
   if (isAssertion) {
     const rootEscrowState = await program.account.rootEscrow.fetch(rootEscrow);
@@ -588,18 +596,15 @@ export async function createRootEscrow(params: CreateRootEscrowParams) {
     expect(rootEscrowState.maxClaimAmount.toNumber()).eq(
       maxClaimAmount.toNumber()
     );
-    expect(rootEscrowState.maxEscrow.toNumber()).eq(
-      maxEscrow.toNumber()
-    );
+    expect(rootEscrowState.maxEscrow.toNumber()).eq(maxEscrow.toNumber());
   }
 
   return rootEscrow;
 }
 
-
 export interface FundRootEscrowParams {
   isAssertion: boolean;
-  rootEscrow: web3.PublicKey,
+  rootEscrow: web3.PublicKey;
   payerKP: web3.Keypair;
 }
 
@@ -607,7 +612,10 @@ export async function fundRootEscrow(params: FundRootEscrowParams) {
   let { isAssertion, rootEscrow, payerKP } = params;
   const program = createLockerProgram(new Wallet(payerKP));
   let rootEscrowState = await program.account.rootEscrow.fetch(rootEscrow);
-  let tokenProgram = rootEscrowState.tokenProgramFlag == 0 ? TOKEN_PROGRAM_ID : TOKEN_2022_PROGRAM_ID;
+  let tokenProgram =
+    rootEscrowState.tokenProgramFlag == 0
+      ? TOKEN_PROGRAM_ID
+      : TOKEN_2022_PROGRAM_ID;
   const payerToken = getAssociatedTokenAddressSync(
     rootEscrowState.tokenMint,
     payerKP.publicKey,
@@ -643,16 +651,23 @@ export async function fundRootEscrow(params: FundRootEscrowParams) {
       )
       .build();
   }
-  await program.methods.fundRootEscrow(rootEscrowState.maxClaimAmount, remainingAccountsInfo).accounts({
-    rootEscrow,
-    tokenMint: rootEscrowState.tokenMint,
-    rootEscrowToken,
-    payer: payerKP.publicKey,
-    payerToken,
-    tokenProgram,
-    systemProgram: web3.SystemProgram.programId,
-    associateTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-  }).remainingAccounts(remainingAccounts ? remainingAccounts : []).signers([payerKP]).rpc().catch(console.log).then(console.log);
+  await program.methods
+    .fundRootEscrow(rootEscrowState.maxClaimAmount, remainingAccountsInfo)
+    .accounts({
+      rootEscrow,
+      tokenMint: rootEscrowState.tokenMint,
+      rootEscrowToken,
+      payer: payerKP.publicKey,
+      payerToken,
+      tokenProgram,
+      systemProgram: web3.SystemProgram.programId,
+      associateTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+    })
+    .remainingAccounts(remainingAccounts ? remainingAccounts : [])
+    .signers([payerKP])
+    .rpc()
+    .catch(console.log)
+    .then(console.log);
 }
 
 export interface CreateVestingEscrowFromRootParams {
@@ -664,14 +679,16 @@ export interface CreateVestingEscrowFromRootParams {
   cliffUnlockAmount: BN;
   amountPerPeriod: BN;
   numberOfPeriod: BN;
-  updateRecipientMode: number,
-  cancelMode: number,
+  updateRecipientMode: number;
+  cancelMode: number;
   recipient: web3.PublicKey;
   proof: Array<number>[];
   payerKP: web3.Keypair;
 }
 
-export async function createVestingEscrowFromRoot(params: CreateVestingEscrowFromRootParams) {
+export async function createVestingEscrowFromRoot(
+  params: CreateVestingEscrowFromRootParams
+) {
   let {
     isAssertion,
     rootEscrow,
@@ -734,16 +751,20 @@ export async function createVestingEscrowFromRoot(params: CreateVestingEscrowFro
   }
 
   await program.methods
-    .createVestingEscrowFromRoot({
-      vestingStartTime,
-      cliffTime,
-      frequency,
-      amountPerPeriod,
-      numberOfPeriod,
-      cliffUnlockAmount,
-      updateRecipientMode,
-      cancelMode,
-    }, proof, remainingAccountsInfo)
+    .createVestingEscrowFromRoot(
+      {
+        vestingStartTime,
+        cliffTime,
+        frequency,
+        amountPerPeriod,
+        numberOfPeriod,
+        cliffUnlockAmount,
+        updateRecipientMode,
+        cancelMode,
+      },
+      proof,
+      remainingAccountsInfo
+    )
     .accounts({
       rootEscrow,
       base,
@@ -756,19 +777,33 @@ export async function createVestingEscrowFromRoot(params: CreateVestingEscrowFro
       tokenProgram,
       systemProgram: web3.SystemProgram.programId,
       associateTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-    }).remainingAccounts(remainingAccounts ? remainingAccounts : []).signers([payerKP])
-    .rpc().catch(console.log).then(console.log);
+    })
+    .remainingAccounts(remainingAccounts ? remainingAccounts : [])
+    .signers([payerKP])
+    .rpc()
+    .catch(console.log)
+    .then(console.log);
 
   if (isAssertion) {
     let escrowState = await program.account.vestingEscrow.fetch(escrow);
-    expect(escrowState.creator.toString()).eq(rootEscrowState.creator.toString());
-    expect(escrowState.vestingStartTime.toString()).eq(vestingStartTime.toString());
+    expect(escrowState.creator.toString()).eq(
+      rootEscrowState.creator.toString()
+    );
+    expect(escrowState.vestingStartTime.toString()).eq(
+      vestingStartTime.toString()
+    );
     expect(escrowState.cliffTime.toString()).eq(cliffTime.toString());
     expect(escrowState.frequency.toString()).eq(frequency.toString());
-    expect(escrowState.amountPerPeriod.toString()).eq(amountPerPeriod.toString());
+    expect(escrowState.amountPerPeriod.toString()).eq(
+      amountPerPeriod.toString()
+    );
     expect(escrowState.numberOfPeriod.toString()).eq(numberOfPeriod.toString());
-    expect(escrowState.cliffUnlockAmount.toString()).eq(cliffUnlockAmount.toString());
-    expect(escrowState.updateRecipientMode.toString()).eq(updateRecipientMode.toString());
+    expect(escrowState.cliffUnlockAmount.toString()).eq(
+      cliffUnlockAmount.toString()
+    );
+    expect(escrowState.updateRecipientMode.toString()).eq(
+      updateRecipientMode.toString()
+    );
     expect(escrowState.cancelMode.toString()).eq(cancelMode.toString());
     expect(escrowState.recipient.toString()).eq(recipient.toString());
   }
@@ -876,12 +911,12 @@ export async function cancelVestingPlan(
     const epoch = BigInt(await getCurrentEpoch(program.provider.connection));
     creator_fee = feeConfig
       ? Number(
-        calculateEpochFee(
-          feeConfig,
-          epoch,
-          BigInt(total_amount - claimable_amount)
+          calculateEpochFee(
+            feeConfig,
+            epoch,
+            BigInt(total_amount - claimable_amount)
+          )
         )
-      )
       : 0;
     claimer_fee = feeConfig
       ? Number(calculateEpochFee(feeConfig, epoch, BigInt(claimable_amount)))
@@ -902,9 +937,9 @@ export async function cancelVestingPlan(
     ).value.amount;
     expect(
       parseInt(creator_token_balance_before) +
-      total_amount -
-      claimable_amount -
-      creator_fee
+        total_amount -
+        claimable_amount -
+        creator_fee
     ).eq(parseInt(creator_token_balance));
 
     const recipient_token_balance = (
@@ -1001,25 +1036,27 @@ export async function closeVestingEscrow(params: CloseVestingEscrowParams) {
 }
 
 export interface VestingEcrow {
-  recipient: web3.PublicKey,
+  recipient: web3.PublicKey;
   vestingStartTime: BN;
   cliffTime: BN;
   frequency: BN;
   cliffUnlockAmount: BN;
   amountPerPeriod: BN;
   numberOfPeriod: BN;
-  updateRecipientMode: number,
-  cancelMode: number,
+  updateRecipientMode: number;
+  cancelMode: number;
 }
 
 export function getTotalDepsitAmount(escrow: VestingEcrow) {
-  return escrow.cliffUnlockAmount.add(escrow.numberOfPeriod.mul(escrow.amountPerPeriod))
+  return escrow.cliffUnlockAmount.add(
+    escrow.numberOfPeriod.mul(escrow.amountPerPeriod)
+  );
 }
 
 export function getMaxClaimAmount(allEscrows: VestingEcrow[]) {
-  let sum = new BN(0)
+  let sum = new BN(0);
   for (let i = 0; i < allEscrows.length; i++) {
-    sum = sum.add(getTotalDepsitAmount(allEscrows[i]))
+    sum = sum.add(getTotalDepsitAmount(allEscrows[i]));
   }
-  return sum
+  return sum;
 }
